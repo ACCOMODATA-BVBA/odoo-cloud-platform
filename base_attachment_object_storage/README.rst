@@ -39,6 +39,17 @@ Default configuration means:
 * application/javascript are stored in database whatever their size
 * text/css are stored in database whatever their size
 
+Multi-tenancy / object storage prefix
+-------------------------------------
+
+In a multi-tenant environment, you might want to use a specific prefix
+for files stored in your object storage container.  This is supported with
+an environment variable `ATTACHMENT_STORAGE_PREFIX` set to the desired  value.
+
+The environment variable can also support the {db} placeholder in case you
+want a specific prefix per database.
+
+
 Disable attachment storage I/O
 ------------------------------
 

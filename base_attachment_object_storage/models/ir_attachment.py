@@ -220,6 +220,21 @@ class IrAttachment(models.Model):
             'No implementation for %s' % (storage,)
         )
 
+    def _store_file_key_addprefix(self, key):
+        """
+        This method allows to add a prefix to the storage key.
+        If needed, the method returns the key with te prefix added
+
+        :param key: the key for a certain data element
+        :return: key value with prefix applied
+        """
+        prefix = os.environ.get('ATTACHMENT_STORAGE_PREFIX')
+        if prefix:
+            prefix = prefix.format(db=self.env.cr.dbname)
+            return f'{prefix}/{key}'
+        else:
+            return key
+
     @api.model
     def _file_write(self, bin_data, checksum):
         location = self.env.context.get('storage_location') or self._storage()
@@ -227,7 +242,8 @@ class IrAttachment(models.Model):
             key = self.env.context.get('force_storage_key')
             if not key:
                 key = self._compute_checksum(bin_data)
-            filename = self._store_file_write(key, bin_data)
+            fkey = self._store_file_key_addprefix(key)
+            filename = self._store_file_write(fkey, bin_data)
         else:
             filename = super()._file_write(bin_data, checksum)
         return filename
