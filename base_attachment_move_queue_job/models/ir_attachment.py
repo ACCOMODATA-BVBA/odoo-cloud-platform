@@ -43,22 +43,31 @@ class IrAttachment(models.Model):
         # which adds ('res_field', '=', False) when the domain does not
         # contain 'res_field'.
         # https://github.com/odoo/odoo/blob/9032617120138848c63b3cfa5d1913c5e5ad76db/odoo/addons/base/ir/ir_attachment.py#L344-L347
-        domain = ['!', ('store_fname', '=like', '{}://%'.format(storage)),
-                  '|',
-                  ('res_field', '=', False),
-                  ('res_field', '!=', False)]
+        domain = [
+            ('store_fname', '!=', False),
+            '!', ('store_fname', '=like', '{}://%'.format(storage)),
+            '|',
+            ('res_field', '=', False),
+            ('res_field', '!=', False)
+        ]
         # We do a copy of the environment so we can workaround the cache issue
         # below. We do not create a new cursor by default because it causes
         # serialization issues due to concurrent updates on attachments during
         # the installation
         with self.do_in_new_env() as new_env:
             model_env = new_env['ir.attachment']
-            ids = model_env.search(domain, limit=limit).ids
-            _logger.info(
-                'migrating %s files to the object storage', len(ids)
+            groups = model_env.read_group(
+                domain,
+                ['store_fname'],
+                ['store_fname'],
+                lazy=True,
+                limit=limit
             )
-            files_to_clean = []
-            for attachment_id in ids:
+            store_fnames = [
+                g['store_fname'] for g in groups
+            ]
+
+            for store_fname in store_fnames:
                 try:
                     with new_env.cr.savepoint():
                         # check that no other transaction has
@@ -66,34 +75,30 @@ class IrAttachment(models.Model):
                         # in that case
                         self.env.cr.execute("SELECT id "
                                             "FROM ir_attachment "
-                                            "WHERE id = %s "
+                                            "WHERE store_fname = %s "
                                             "FOR UPDATE NOWAIT",
-                                            (attachment_id,),
+                                            (store_fname,),
                                             log_exceptions=False)
-
-                        # This is a trick to avoid having the 'datas'
-                        # function fields computed for every attachment on
-                        # each iteration of the loop. The former issue
-                        # being that it reads the content of the file of
-                        # ALL the attachments on each loop.
                         new_env.clear()
-                        attachment = model_env.browse(attachment_id)
-                        path = attachment._move_attachment_to_store()
-                        if path:
-                            files_to_clean.append(path)
+                        attachments = model_env.search([
+                            ('store_fname', '=', store_fname),
+                            '|',
+                            ('res_field', '=', False),
+                            ('res_field', '!=', False)
+
+                        ])
+                        path = attachments[0]._move_attachment_to_store()
+                        attachments.update({
+                            'store_fname': attachments[0].store_fname,
+                            'mimetype': attachments[0].mimetype,
+                            'db_datas': attachments[0].db_datas,
+                        })
+                        clean_fs([path])
                 except psycopg2.OperationalError:
                     _logger.error('Could not migrate attachment %s to S3',
-                                  attachment_id)
+                                  store_fname)
 
-            def clean():
-                clean_fs(files_to_clean)
-
-            # delete the files from the filesystem once we know the changes
-            # have been committed in ir.attachment
-            if files_to_clean:
-                new_env.cr.after('commit', clean)
-
-            return len(ids)
+            return len(store_fnames)
 
     @api.model
     def _force_storage_to_object_storage(self, new_cr=False):
