@@ -67,6 +67,8 @@ class IrAttachment(models.Model):
                 g['store_fname'] for g in groups
             ]
 
+            _logger.debug('Start moving fnames: %s', ','.join(store_fnames))
+
             for store_fname in store_fnames:
                 try:
                     with new_env.cr.savepoint():
@@ -87,12 +89,20 @@ class IrAttachment(models.Model):
                             ('res_field', '!=', False)
 
                         ])
+                        _logger.debug(
+                            'found %s records with fname "%s"',
+                            len(attachments),
+                            store_fname,
+                        )
                         path = attachments[0]._move_attachment_to_store()
-                        attachments.update({
+                        vals = {
                             'store_fname': attachments[0].store_fname,
                             'mimetype': attachments[0].mimetype,
                             'db_datas': attachments[0].db_datas,
-                        })
+                        }
+                        _logger.debug('Writing new data: %s', vals)
+                        attachments.update(vals)
+                        _logger.debug('cleaning path "%s"', path)
                         clean_fs([path])
                 except psycopg2.OperationalError:
                     _logger.error('Could not migrate attachment %s to S3',

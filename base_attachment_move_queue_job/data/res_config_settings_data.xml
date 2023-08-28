@@ -3,7 +3,7 @@
 
     <record id="ir_attachment_transfer_chunk_size" model="ir.config_parameter">
         <field name="key">ir_attachment.transfer.chunk.size</field>
-        <field name="value">10</field>
+        <field name="value">100</field>
     </record>
 
 </odoo>
