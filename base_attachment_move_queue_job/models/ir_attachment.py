@@ -9,6 +9,8 @@ _logger = logging.getLogger(__name__)
 from odoo.addons.base_attachment_object_storage.models.ir_attachment import \
     clean_fs
 
+from odoo.addons.base.models.ir_attachment import IrAttachment as BaseIrAttachment
+
 
 class IrAttachment(models.Model):
     _inherit = 'ir.attachment'
@@ -101,8 +103,8 @@ class IrAttachment(models.Model):
                             'db_datas': attachments[0].db_datas,
                         }
                         _logger.debug('Writing new data: %s', vals)
-                        # use _write to circumvent write function in ir_att
-                        attachments._write(vals)
+                        # use super().write to circumvent write function in ir_att
+                        super(BaseIrAttachment, attachments).write(vals)
                         _logger.debug('cleaning path "%s"', path)
                         clean_fs([path])
                 except psycopg2.OperationalError:
