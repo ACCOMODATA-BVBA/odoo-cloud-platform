@@ -62,7 +62,7 @@ class IrAttachment(models.Model):
                 domain,
                 ['checksum', 'store_fname'],
                 ['checksum', 'store_fname'],
-                lazy=True,
+                lazy=False,
                 limit=limit
             )
             group_data = [
