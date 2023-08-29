@@ -60,18 +60,25 @@ class IrAttachment(models.Model):
             model_env = new_env['ir.attachment']
             groups = model_env.read_group(
                 domain,
-                ['checksum'],
-                ['checksum'],
+                ['checksum', 'store_fname'],
+                ['checksum', 'store_fname'],
                 lazy=True,
                 limit=limit
             )
-            checksums = [
-                g['checksum'] for g in groups
+            group_data = [
+                (g['checksum'], g['store_fname']) for g in groups
             ]
 
-            _logger.debug('Start moving fnames: %s', ','.join(checksums))
+            _logger.debug('Start moving fnames: %s', ','.join(group_data))
 
-            for checksum in checksums:
+            for checksum, store_fname in group_data:
+                _logger.debug('Started processing "%s" - "%s"', checksum, store_fname)
+                if not store_fname:
+                    _logger.warning(
+                        'Skipping atts with empty store_fname and checksum %s',
+                        checksum
+                    )
+                    continue
                 try:
                     with new_env.cr.savepoint():
                         # check that no other transaction has
@@ -86,6 +93,7 @@ class IrAttachment(models.Model):
                         new_env.clear()
                         attachments = model_env.search([
                             ('checksum', '=', checksum),
+                            ('store_fname', '=', store_fname),
                             '|',
                             ('res_field', '=', False),
                             ('res_field', '!=', False)
@@ -111,7 +119,7 @@ class IrAttachment(models.Model):
                     _logger.error('Could not migrate attachment %s to S3',
                                   checksum)
 
-            return len(checksums)
+            return len(group_data)
 
     @api.model
     def _force_storage_to_object_storage(self, new_cr=False):
