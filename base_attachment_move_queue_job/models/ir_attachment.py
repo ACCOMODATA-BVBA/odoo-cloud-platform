@@ -69,8 +69,6 @@ class IrAttachment(models.Model):
                 (g['checksum'], g['store_fname']) for g in groups
             ]
 
-            _logger.debug('Start moving fnames: %s', ','.join(group_data))
-
             for checksum, store_fname in group_data:
                 _logger.debug('Started processing "%s" - "%s"', checksum, store_fname)
                 if not store_fname:
