@@ -1,13 +1,21 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <odoo>
 
-    <record id="job_force_storage_to_object_storage_limited"
-            model="queue.job.function">
-        <field name="model_id" ref="model_ir_attachment"/>
-        <field name="method">job_force_storage_to_object_storage_limited</field>
-        <field name="channel_id" ref="queue_job.channel_root"/>
-        <field name="retry_pattern">{"1": 10, "2": 15, "3": 30, "4": 60, "5": 600}</field>
-    </record>
+  <record id="job_force_storage_to_object_storage_limited"
+          model="queue.job.function">
+    <field name="model_id" ref="model_ir_attachment"/>
+    <field name="method">job_force_storage_to_object_storage_limited</field>
+    <field name="channel_id" ref="queue_job.channel_root"/>
+    <field name="retry_pattern">{"1": 10, "2": 15, "3": 30, "4": 60, "5": 600}</field>
+  </record>
+
+  <record id="job_transfer_to_object_storage"
+          model="queue.job.function">
+    <field name="model_id" ref="model_ir_attachment"/>
+    <field name="method">_transfer_to_object_storage</field>
+    <field name="channel_id" ref="queue_job.channel_root"/>
+    <field name="retry_pattern">{"1": 10, "2": 15, "3": 30, "4": 60, "5": 600}</field>
+  </record>
 
 
 </odoo>
